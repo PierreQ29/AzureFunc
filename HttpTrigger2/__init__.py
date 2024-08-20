@@ -5,9 +5,6 @@ from azure.storage.blob import BlobClient
 from io import StringIO
 import os
 
-# Variable globale pour stocker les IDs utilisateurs
-user_ids = []
-
 # Charger un fichier CSV depuis Azure Blob Storage
 def load_csv_file(connection_string, container_name, file_name):
     blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
@@ -19,7 +16,10 @@ def load_csv_file(connection_string, container_name, file_name):
 # Initialiser les IDs utilisateurs lors du chargement du module
 connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 container_name = "data"
-load_csv_file(connection_string, container_name, "clicks_df.csv")
+df = load_csv_file(connection_string, container_name, "clicks_df.csv")
+
+# Vérification du téléchargement du fichier
+logging.info(f"DataFrame loaded with {len(df)} rows.")
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
