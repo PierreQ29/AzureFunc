@@ -37,10 +37,8 @@ def load_article_embeddings(connection_string, container_name, file_name):
 def load_model(connection_string, container_name, file_name):
     blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
     download_stream = blob_client.download_blob()
-    with tempfile.NamedTemporaryFile(delete=False) as temp_model_file:
-        temp_model_file.write(download_stream.readall())
-        temp_model_file_path = temp_model_file.name
-    predictions, model = dump.load(temp_model_file_path)
+    model_content = download_stream.readall()
+    predictions, model = dump.loads(model_content)
     return model
 
 # Initialisation des fichiers et modèles
