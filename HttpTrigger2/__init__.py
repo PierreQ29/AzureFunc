@@ -25,7 +25,9 @@ def load_user_ids(connection_string, container_name, file_name):
 def load_article_embeddings(connection_string, container_name, file_name):
     blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
     download_stream = blob_client.download_blob()
-    pickle_content = download_stream.readall()
+    pickle_content = b""
+    for chunk in download_stream.chunks():
+        pickle_content += chunk
     articles_emb = pd.read_pickle(io.BytesIO(pickle_content))
     articles_emb = pd.DataFrame(articles_emb, columns=["embedding_" + str(i) for i in range(articles_emb.shape[1])])
     return articles_emb
