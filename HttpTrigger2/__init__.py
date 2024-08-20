@@ -11,47 +11,67 @@ import json
 
 # Charger les IDs utilisateurs une seule fois lors de l'initialisation du module
 def load_user_ids(connection_string, container_name, file_name):
-    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
-    download_stream = blob_client.download_blob()
-    csv_content = download_stream.content_as_text()
-    df = pd.read_csv(StringIO(csv_content))
-    return df['user_id'].tolist()
+    try:
+        blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+        download_stream = blob_client.download_blob()
+        csv_content = download_stream.content_as_text()
+        df = pd.read_csv(StringIO(csv_content))
+        return df['user_id'].tolist()
+    except Exception as e:
+        logging.error(f"Erreur lors du chargement des IDs utilisateurs: {e}")
+        return []
 
 # Charger un fichier pickle depuis Azure Blob Storage
-def load_pickle_file(connection_string, container_name, file_name):
-    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
-    download_stream = blob_client.download_blob()
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(download_stream.readall())
-        temp_file_path = temp_file.name
-    _, model = dump.load(temp_file_path)
-    return model
+def load_model(connection_string, container_name, file_name):
+    try:
+        blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+        download_stream = blob_client.download_blob()
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(download_stream.readall())
+            temp_file_path = temp_file.name
+        _, model = dump.load(temp_file_path)
+        return model
+    except Exception as e:
+        logging.error(f"Erreur lors du chargement du modèle: {e}")
+        return None
 
 # Charger un fichier CSV depuis Azure Blob Storage
 def load_csv_file(connection_string, container_name, file_name):
-    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
-    download_stream = blob_client.download_blob()
-    csv_content = download_stream.content_as_text()
-    df = pd.read_csv(StringIO(csv_content))
-    return df
+    try:
+        blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+        download_stream = blob_client.download_blob()
+        csv_content = download_stream.content_as_text()
+        df = pd.read_csv(StringIO(csv_content))
+        return df
+    except Exception as e:
+        logging.error(f"Erreur lors du chargement du fichier CSV: {e}")
+        return pd.DataFrame()
 
 # Charger un fichier pickle en DataFrame depuis Azure Blob Storage
 def load_pickle_df(connection_string, container_name, file_name):
-    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
-    download_stream = blob_client.download_blob()
-    pickle_content = download_stream.readall()
-    df = pd.read_pickle(BytesIO(pickle_content))
-    return df
+    try:
+        blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+        download_stream = blob_client.download_blob()
+        pickle_content = download_stream.readall()
+        df = pd.read_pickle(BytesIO(pickle_content))
+        return df
+    except Exception as e:
+        logging.error(f"Erreur lors du chargement du fichier pickle: {e}")
+        return pd.DataFrame()
 
 # Initialisation des fichiers et modèles
 connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 container_name = "data"
 user_ids = load_user_ids(connection_string, container_name, "user_id.csv")
-model = load_pickle_file(connection_string, container_name, "model_nmf.pickle")
+model = load_model(connection_string, container_name, "model_nmf.pickle")
 articles_emb = load_pickle_df(connection_string, container_name, "articles_embeddings.pickle")
 clicks_df = load_csv_file(connection_string, container_name, "clicks_df.csv")
 
 def recommend_articles_adj(user_id, clicks_df, articles_emb, model, n=5):
+    if model is None or articles_emb.empty or clicks_df.empty:
+        logging.error("Les fichiers ou le modèle ne sont pas correctement chargés.")
+        return []
+
     # Obtenir la liste de tous les IDs d'articles
     all_article_ids = set(clicks_df['click_article_id'].unique())
     
@@ -123,5 +143,3 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error(f"Erreur lors du chargement des fichiers ou du modèle: {e}")
         return func.HttpResponse(f"Erreur lors du chargement des fichiers ou du modèle: {e}", status_code=500)
-
-
