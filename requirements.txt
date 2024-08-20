@@ -2,3 +2,5 @@ azure-functions
 pandas
 azure-identity
 azure-storage-blob
+surprise
+scikit-learn
