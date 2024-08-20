@@ -107,6 +107,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 user_id = req_body.get('user_id')
 
         if user_id:
+            logging.info(f'User ID: {user_id}')
             recommendations = recommend_articles_adj(int(user_id), clicks_df, articles_emb, model)
             logging.info(f'Recommendations for user {user_id}: {recommendations}')
             
