@@ -13,20 +13,23 @@ def load_user_ids(connection_string, container_name, file_name):
     csv_content = download_stream.content_as_text()
     df = pd.read_csv(StringIO(csv_content))
     return df['user_id'].tolist()
-    
-# Charger un fichier CSV depuis Azure Blob Storage
-def load_csv_file(connection_string, container_name, file_name):
+   
+# Charger le fichier clicks depuis Azure Blob Storage
+def load_clicks_file(connection_string, container_name, file_name):
     blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
     download_stream = blob_client.download_blob()
     csv_content = download_stream.content_as_text()
     df = pd.read_csv(StringIO(csv_content))
     return df
 
+# Charger le fichier embedding depuis Azure Blob Storage
 def load_article_embeddings(connection_string, container_name, file_name):
     blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
     download_stream = blob_client.download_blob()
     pickle_content = download_stream.readall()
-    return pickle_content
+    articles_emb = pd.read_pickle(BytesIO(pickle_content))
+    articles_emb = pd.DataFrame(articles_emb, columns=["embedding_" + str(i) for i in range(articles_emb.shape[1])])
+    return articles_emb
 
 # Initialisation des fichiers et modèles
 connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
@@ -40,9 +43,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # Vérification du téléchargement du fichier
     logging.info(f"clicks loaded with {len(clicks_df)} rows.")
     logging.info(f"user loaded with {len(user_ids)} rows.")
-    
-    articles_emb = pd.read_pickle(io.BytesIO(pickle_content))
-    articles_emb = pd.DataFrame(articles_emb, columns=["embedding_" + str(i) for i in range(articles_emb.shape[1])])
     logging.info(f"embed loaded with {len(articles_emb)} rows.")
     
     name = req.params.get('name')
