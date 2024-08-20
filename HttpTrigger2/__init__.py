@@ -51,38 +51,6 @@ model = load_pickle_file(connection_string, container_name, "model_nmf.pickle")
 articles_emb = load_pickle_df(connection_string, container_name, "articles_embeddings.pickle")
 clicks_df = load_csv_file(connection_string, container_name, "clicks_df.csv")
 
-logging.info("Tous les fichiers ont été chargés avec succès.")
-
-def main(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger function processed a request.')
-
-    try:
-        user_id = req.params.get('user_id')
-        if not user_id:
-            try:
-                req_body = req.get_json()
-            except ValueError:
-                pass
-            else:
-                user_id = req_body.get('user_id')
-
-        if user_id:
-            recommendations = recommend_articles_adj(int(user_id), clicks_df, articles_emb, model)
-            logging.info(f'Recommendations for user {user_id}: {recommendations}')
-            
-            # Convertir les recommandations en entiers Python
-            recommendations = [int(rec) for rec in recommendations]
-            
-            return func.HttpResponse(json.dumps(recommendations), mimetype="application/json")
-        else:
-            return func.HttpResponse(
-                "Veuillez fournir un identifiant utilisateur.",
-                status_code=400
-            )
-    except Exception as e:
-        logging.error(f"Erreur lors du chargement des fichiers ou du modèle: {e}")
-        return func.HttpResponse(f"Erreur lors du chargement des fichiers ou du modèle: {e}", status_code=500)
-
 def recommend_articles_adj(user_id, clicks_df, articles_emb, model, n=5):
     # Obtenir la liste de tous les IDs d'articles
     all_article_ids = set(clicks_df['click_article_id'].unique())
@@ -124,3 +92,35 @@ def recommend_articles_adj(user_id, clicks_df, articles_emb, model, n=5):
     recommended_articles = [pred[0] for pred in predictions[:n]]
     
     return recommended_articles
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('Python HTTP trigger function processed a request.')
+
+    try:
+        user_id = req.params.get('user_id')
+        if not user_id:
+            try:
+                req_body = req.get_json()
+            except ValueError:
+                pass
+            else:
+                user_id = req_body.get('user_id')
+
+        if user_id:
+            recommendations = recommend_articles_adj(int(user_id), clicks_df, articles_emb, model)
+            logging.info(f'Recommendations for user {user_id}: {recommendations}')
+            
+            # Convertir les recommandations en entiers Python
+            recommendations = [int(rec) for rec in recommendations]
+            
+            return func.HttpResponse(json.dumps(recommendations), mimetype="application/json")
+        else:
+            return func.HttpResponse(
+                "Veuillez fournir un identifiant utilisateur.",
+                status_code=400
+            )
+    except Exception as e:
+        logging.error(f"Erreur lors du chargement des fichiers ou du modèle: {e}")
+        return func.HttpResponse(f"Erreur lors du chargement des fichiers ou du modèle: {e}", status_code=500)
+
+
