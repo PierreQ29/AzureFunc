@@ -24,11 +24,17 @@ load_csv_file(connection_string, container_name, "clicks_df.csv")
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
 
-    name = "Naaaame"
-    user_ids_string = ",".join([str(id) for id in user_ids])
+    name = req.params.get('name')
+    if not name:
+        try:
+            req_body = req.get_json()
+        except ValueError:
+            pass
+        else:
+            name = req_body.get('name')
 
-    if user_ids_string:
-        return func.HttpResponse(user_ids_string, status_code=200)
+    if name:
+        return func.HttpResponse(f"Hello, {name}!")
     else:
         return func.HttpResponse(
              "Please pass a name on the query string or in the request body",
