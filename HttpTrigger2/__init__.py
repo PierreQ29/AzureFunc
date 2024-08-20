@@ -40,7 +40,7 @@ def load_model(connection_string, container_name, file_name):
     with tempfile.NamedTemporaryFile(delete=False) as temp_model_file:
         temp_model_file.write(download_stream.readall())
         temp_model_file_path = temp_model_file.name
-    _, model = dump.load(temp_model_file_path)
+    predictions, model = dump.load(temp_model_file_path)
     return model
 
 # Initialisation des fichiers et modèles
