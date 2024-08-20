@@ -21,27 +21,27 @@ def load_csv_file(connection_string, container_name, file_name):
     df = pd.read_csv(StringIO(csv_content))
     return df
 
-def load_article_embeddings(connection_string, container_name, file_name):
-    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
-    download_stream = blob_client.download_blob()
-    pickle_content = download_stream.readall()
-    articles_emb = pd.read_pickle(io.BytesIO(pickle_content))
-    articles_emb = pd.DataFrame(articles_emb, columns=["embedding_" + str(i) for i in range(articles_emb.shape[1])])
-    return articles_emb
+# def load_article_embeddings(connection_string, container_name, file_name):
+#     blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+#     download_stream = blob_client.download_blob()
+#     pickle_content = download_stream.readall()
+#     articles_emb = pd.read_pickle(io.BytesIO(pickle_content))
+#     articles_emb = pd.DataFrame(articles_emb, columns=["embedding_" + str(i) for i in range(articles_emb.shape[1])])
+#     return articles_emb
 
 # Initialisation des fichiers et modèles
 connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 container_name = "data"
 user_ids = load_user_ids(connection_string, container_name, "user_id.csv")
 clicks_df = load_csv_file(connection_string, container_name, "clicks_df.csv")
-articles_emb = load_article_embeddings(connection_string, container_name, "articles_embeddings.pickle")
+# articles_emb = load_article_embeddings(connection_string, container_name, "articles_embeddings.pickle")
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
     # Vérification du téléchargement du fichier
     logging.info(f"clicks loaded with {len(clicks_df)} rows.")
     logging.info(f"user loaded with {len(user_ids)} rows.")
-    logging.info(f"embed loaded with {len(articles_emb)} rows.")
+    # logging.info(f"embed loaded with {len(articles_emb)} rows.")
     
     name = req.params.get('name')
     if not name:
