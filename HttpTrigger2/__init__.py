@@ -8,12 +8,17 @@ from surprise import dump
 # Charger un fichier pickle depuis Azure Blob Storage
 def load_model(connection_string, container_name, file_name):
     try:
+        logging.info("Début du chargement du modèle.")
         blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+        logging.info("Client Blob créé.")
         download_stream = blob_client.download_blob()
+        logging.info("Blob téléchargé.")
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file.write(download_stream.readall())
             temp_file_path = temp_file.name
+        logging.info("Fichier temporaire créé.")
         _, model = dump.load(temp_file_path)
+        logging.info("Modèle chargé avec succès.")
         return model
     except Exception as e:
         logging.error(f"Erreur lors du chargement du modèle: {e}")
