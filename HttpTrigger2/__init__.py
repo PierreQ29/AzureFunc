@@ -32,7 +32,7 @@ def load_article_embeddings(connection_string, container_name, file_name):
 connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 container_name = "data"
 user_ids = load_user_ids(connection_string, container_name, "user_id.csv")
-# clicks_df = load_csv_file(connection_string, container_name, "clicks_df.csv")
+clicks_df = load_csv_file(connection_string, container_name, "clicks_df.csv")
 pickle_content = load_article_embeddings(connection_string, container_name, "articles_embeddings.pickle")
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
