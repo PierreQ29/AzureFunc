@@ -19,7 +19,8 @@ container_name = "data"
 df = load_csv_file(connection_string, container_name, "clicks_df.csv")
 
 # Vérification du téléchargement du fichier
-logging.info(f"DataFrame loaded with {len(df)} rows.")
+print(f"DataFrame loaded with {len(df)} rows.")
+
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
