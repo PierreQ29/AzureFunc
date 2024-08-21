@@ -35,11 +35,23 @@ def load_article_embeddings(connection_string, container_name, file_name):
 
 # Charger le modèle depuis Azure Blob Storage
 def load_model(connection_string, container_name, file_name):
-    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
-    download_stream = blob_client.download_blob()
-    model_content = download_stream.readall()
-    predictions, model = dump.loads(model_content)
-    return model
+    # Function to download and store model (not called directly)
+    def _download_model():
+        blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+        download_stream = blob_client.download_blob()
+        model_content = download_stream.readall()
+        predictions, model = dump.loads(model_content)
+        return model
+
+    global_model = None
+
+    def get_model():
+        nonlocal global_model
+        if global_model is None:
+            global_model = _download_model()
+        return global_model
+
+    return get_model
 
 # Initialisation des fichiers et modèles
 connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
