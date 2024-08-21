@@ -5,7 +5,6 @@ from azure.storage.blob import BlobClient
 from io import StringIO, BytesIO
 import os
 import pickle
-import tempfile
 from surprise import NMF, Dataset, Reader
 
 # Charger les IDs utilisateurs une seule fois lors de l'initialisation du module
@@ -33,13 +32,12 @@ def load_article_embeddings(connection_string, container_name, file_name):
     articles_emb = pd.DataFrame(articles_emb, columns=["embedding_" + str(i) for i in range(articles_emb.shape[1])])
     return articles_emb
 
-# Entraîner le modèle avec les meilleurs hyperparamètres sur l'ensemble des données
-def train_model(clicks_df):
-    reader = Reader(rating_scale=(clicks_df['rating'].min(), clicks_df['rating'].max()))
-    data = Dataset.load_from_df(clicks_df[['user_id', 'item_id', 'rating']], reader)
-    trainset = data.build_full_trainset()
-    model = NMF(n_epochs=5, n_factors=10, reg_pu=0.4, reg_qi=0.4)
-    model.fit(trainset)
+# Charger le modèle depuis Azure Blob Storage
+def load_model(connection_string, container_name, file_name):
+    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+    download_stream = blob_client.download_blob()
+    model_content = download_stream.readall()
+    model = pickle.loads(model_content)
     return model
 
 # Initialisation des fichiers et modèles
@@ -48,7 +46,7 @@ container_name = "data"
 user_ids = load_user_ids(connection_string, container_name, "user_id.csv")
 clicks_df = load_clicks_file(connection_string, container_name, "clicks_df.csv")
 articles_emb = load_article_embeddings(connection_string, container_name, "articles_embeddings.pickle")
-model = train_model(clicks_df)
+model = load_model(connection_string, container_name, "model_nmf.pickle")
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
@@ -56,7 +54,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info(f"clicks loaded with {len(clicks_df)} rows.")
     logging.info(f"user loaded with {len(user_ids)} rows.")
     logging.info(f"embed loaded with {len(articles_emb)} rows.")
-    logging.info("Modèle NMF entraîné avec succès.")
+    logging.info("Modèle NMF chargé avec succès.")
     
     name = req.params.get('name')
     if not name:
