@@ -6,7 +6,7 @@ from io import StringIO, BytesIO
 import os
 import pickle
 import tempfile
-from surprise import dump
+from surprise import NMF, Dataset, Reader
 
 # Charger les IDs utilisateurs une seule fois lors de l'initialisation du module
 def load_user_ids(connection_string, container_name, file_name):
@@ -33,14 +33,13 @@ def load_article_embeddings(connection_string, container_name, file_name):
     articles_emb = pd.DataFrame(articles_emb, columns=["embedding_" + str(i) for i in range(articles_emb.shape[1])])
     return articles_emb
 
-# Charger le modèle depuis Azure Blob Storage
-def load_model(connection_string, container_name, file_name):
-    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
-    download_stream = blob_client.download_blob()
-    with tempfile.NamedTemporaryFile(delete=False) as temp_model_file:
-        temp_model_file.write(download_stream.readall())
-        temp_model_file_path = temp_model_file.name
-    predictions, model = dump.load(temp_model_file_path)
+# Entraîner le modèle avec les meilleurs hyperparamètres sur l'ensemble des données
+def train_model(clicks_df):
+    reader = Reader(rating_scale=(clicks_df['rating'].min(), clicks_df['rating'].max()))
+    data = Dataset.load_from_df(clicks_df[['user_id', 'item_id', 'rating']], reader)
+    trainset = data.build_full_trainset()
+    model = NMF(n_epochs=5, n_factors=10, reg_pu=0.4, reg_qi=0.4)
+    model.fit(trainset)
     return model
 
 # Initialisation des fichiers et modèles
@@ -49,7 +48,7 @@ container_name = "data"
 user_ids = load_user_ids(connection_string, container_name, "user_id.csv")
 clicks_df = load_clicks_file(connection_string, container_name, "clicks_df.csv")
 articles_emb = load_article_embeddings(connection_string, container_name, "articles_embeddings.pickle")
-model = load_model(connection_string, container_name, "model_nmf.pickle")
+model = train_model(clicks_df)
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
@@ -57,7 +56,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info(f"clicks loaded with {len(clicks_df)} rows.")
     logging.info(f"user loaded with {len(user_ids)} rows.")
     logging.info(f"embed loaded with {len(articles_emb)} rows.")
-    logging.info("model_nmf.pickle téléchargé avec succès.")
+    logging.info("Modèle NMF entraîné avec succès.")
     
     name = req.params.get('name')
     if not name:
