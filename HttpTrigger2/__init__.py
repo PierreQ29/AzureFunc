@@ -35,23 +35,13 @@ def load_article_embeddings(connection_string, container_name, file_name):
 
 # Charger le modèle depuis Azure Blob Storage
 def load_model(connection_string, container_name, file_name):
-    # Function to download and store model (not called directly)
-    def _download_model():
-        blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
-        download_stream = blob_client.download_blob()
-        model_content = download_stream.readall()
-        predictions, model = dump.loads(model_content)
-        return model
-
-    global_model = None
-
-    def get_model():
-        nonlocal global_model
-        if global_model is None:
-            global_model = _download_model()
-        return global_model
-
-    return get_model
+    blob_client = BlobClient.from_connection_string(connection_string, container_name, file_name)
+    download_stream = blob_client.download_blob()
+    with tempfile.NamedTemporaryFile(delete=False) as temp_model_file:
+        temp_model_file.write(download_stream.readall())
+        temp_model_file_path = temp_model_file.name
+    predictions, model = dump.load(temp_model_file_path)
+    return model
 
 # Initialisation des fichiers et modèles
 connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
@@ -59,7 +49,7 @@ container_name = "data"
 user_ids = load_user_ids(connection_string, container_name, "user_id.csv")
 clicks_df = load_clicks_file(connection_string, container_name, "clicks_df.csv")
 articles_emb = load_article_embeddings(connection_string, container_name, "articles_embeddings.pickle")
-model = load_model(connection_string, container_name, "model_nmf.pickle")
+
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
@@ -67,6 +57,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info(f"clicks loaded with {len(clicks_df)} rows.")
     logging.info(f"user loaded with {len(user_ids)} rows.")
     logging.info(f"embed loaded with {len(articles_emb)} rows.")
+    model = load_model(connection_string, container_name, "model_nmf.pickle")
     logging.info("model_nmf.pickle téléchargé avec succès.")
     
     name = req.params.get('name')
