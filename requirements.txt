@@ -1,6 +1,6 @@
 azure-functions
 pandas
-azure-identity
+numpy<2
+scikit_learn
 azure-storage-blob
 surprise
-scikit-learn
